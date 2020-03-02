@@ -5,7 +5,8 @@ const express = require("express"); // node framework
 const bodyParser = require("body-parser"); //read user's input with req.body (middlewear)
 const ejs = require("ejs"); // for templating
 const mongoose = require("mongoose"); // for mongoDB database
-const md5 = require("md5"); // to hash password input
+const bcrypt = require("bcrypt"); // hash with salt rounds
+const saltRounds = 10; // number of salt rounds for bcrypt
 
 const app = express();
 
@@ -45,38 +46,44 @@ app.get("/register", function(req, res) {
 // create a post request to grab the data from the register page, and save it to our User collection.
 // req.body.username is got from input on line14, and password is grab from input on line18
 app.post("/register", function(req, res) {
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password) // hash the password using md5
-    });
+
+    bcrypt.hash(req.body.password, saltRounds, function (err, hash) { // bcrypt function, takes input field pw
+        const newUser = new User({
+            email: req.body.username,
+            password: hash // hashed password with bcrypt after salt rounds
+        });
 
 // save new user and see if there is an error. if not, then render the secrets page.
-    newUser.save(function(err) {
-        if (err) {
-            console.log(err);
-        } else {
-            res.render("secrets");
-        }
-    })
+        newUser.save(function(err) {
+            if (err) {
+                console.log(err);
+            } else {
+                res.render("secrets");
+            }
+        })
+    });
 });
 
 // this will check if the entered username/password is in our database,
 app.post("/login", function(req, res) {
     const username = req.body.username; //grab user input from login page's username
-    const password = md5(req.body.password); //grab user input from login page's password, (md5 to match the hashed pw)
+    const password = req.body.password; // grab user input from login page's password
 
 // find email input from the User DB, if can't find then throw an error, else if it finds the user in the DB
 // and the found user's password in the DB matches the input password, then render secrets page.
+// find One user that matches the input username, and the takes the foundUser and uses bcrypt compare to find pw
     User.findOne({email: username}, function(err, foundUser) {
         if (err) {
             console.log(err);
         } else {
             if (foundUser) {
-                if (foundUser.password === password) {
-                    res.render("secrets");
+                bcrypt.compare(password, foundUser.password, function (err, result) { //bcrypt compare method
+                    if (result === true ) {
+                        res.render("secrets") // if pw matches, then render secrets page
+                    }
+                });
                 }
             }
-        }
         })
 });
 
