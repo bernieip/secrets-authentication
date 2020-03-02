@@ -1,11 +1,11 @@
 //jshint esversion:6
-require('dotenv').config(); // dotenv package (must be a the top)
+require('dotenv').config(); // dotenv package for .env file (must be a the top)
 
 const express = require("express"); // node framework
 const bodyParser = require("body-parser"); //read user's input with req.body (middlewear)
 const ejs = require("ejs"); // for templating
 const mongoose = require("mongoose"); // for mongoDB database
-const encrypt = require("mongoose-encryption"); // for password encryption
+const md5 = require("md5"); // to hash password input
 
 const app = express();
 
@@ -23,11 +23,6 @@ const userSchema = new mongoose.Schema({
     email: String,
     password: String
 });
-
-// create a secret unguessable long string, encrypt only the password field
-// process.env.SECRET = from .env file
-// (this part must be before we create a collection below)
-userSchema.plugin(encrypt, { secret: process.env.SECRET, encryptedFields: ['password'] });
 
 // create new collection called User and uses the userSchema schema
 const User = new mongoose.model("User", userSchema);
@@ -52,7 +47,7 @@ app.get("/register", function(req, res) {
 app.post("/register", function(req, res) {
     const newUser = new User({
         email: req.body.username,
-        password: req.body.password
+        password: md5(req.body.password) // hash the password using md5
     });
 
 // save new user and see if there is an error. if not, then render the secrets page.
@@ -68,7 +63,7 @@ app.post("/register", function(req, res) {
 // this will check if the entered username/password is in our database,
 app.post("/login", function(req, res) {
     const username = req.body.username; //grab user input from login page's username
-    const password = req.body.password; //grab user input from login page's password
+    const password = md5(req.body.password); //grab user input from login page's password, (md5 to match the hashed pw)
 
 // find email input from the User DB, if can't find then throw an error, else if it finds the user in the DB
 // and the found user's password in the DB matches the input password, then render secrets page.
@@ -84,7 +79,6 @@ app.post("/login", function(req, res) {
         }
         })
 });
-
 
 app.listen(3000, function() {
     console.log("Server is listening on port 3000.")
