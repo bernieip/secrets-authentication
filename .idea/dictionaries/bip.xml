@@ -3,6 +3,7 @@
     <words>
       <w>bodyparser</w>
       <w>middlewear</w>
+      <w>resave</w>
     </words>
   </dictionary>
 </component>
